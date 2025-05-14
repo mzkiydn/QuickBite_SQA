@@ -1,54 +1,65 @@
 <?php
-    // Include all PHP files from the includes folder
-    foreach (glob("../../includes/*.php") as $file) {
-        include $file;
+require '../../vendor/autoload.php'; // Include Stripe PHP library
+
+// Stripe API keys (replace with your actual keys)
+\Stripe\Stripe::setApiKey('secret key'); // Secret Key
+
+// Include all PHP files from the includes folder
+foreach (glob("../../includes/*.php") as $file) {
+    include $file;
+}
+
+// Database connection (update with your database credentials)
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "quickbite";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Get orderId from query string
+if (!isset($_GET['orderId']) || empty($_GET['orderId'])) {
+    die("Order ID is required.");
+}
+
+$orderId = intval($_GET['orderId']); // Sanitize input
+
+// Fetch order details
+$orderQuery = "SELECT * FROM `order` WHERE orderID = $orderId";
+$orderResult = $conn->query($orderQuery);
+
+if ($orderResult->num_rows > 0) {
+    $order = $orderResult->fetch_assoc();
+} else {
+    die("Order not found.");
+}
+
+// Fetch menu items for the order
+$menuItemsQuery = "
+    SELECT menu.name, menu.price 
+    FROM menulist 
+    JOIN menu ON menulist.menuID = menu.menuID 
+    WHERE menulist.orderID = $orderId";
+$menuItemsResult = $conn->query($menuItemsQuery);
+
+$menuItems = [];
+$totalPrice = 0;
+
+if ($menuItemsResult->num_rows > 0) {
+    while ($row = $menuItemsResult->fetch_assoc()) {
+        $menuItems[] = $row;
+        $totalPrice += $row['price'];
     }
+} else {
+    die("No menu items found for this order.");
+}
 
-    // // Database connection (update with your database credentials)
-    // $servername = "localhost";
-    // $username = "root";
-    // $password = "";
-    // $dbname = "quickbite";
-
-    // $conn = new mysqli($servername, $username, $password, $dbname);
-
-    // // Check connection
-    // if ($conn->connect_error) {
-    //     die("Connection failed: " . $conn->connect_error);
-    // }
-
-    // // Fetch order details (replace with actual order ID from session or request)
-    // $orderId = 1234; // Example order ID
-    // $orderQuery = "SELECT * FROM `order` WHERE orderID = $orderId";
-    // $orderResult = $conn->query($orderQuery);
-
-    // if ($orderResult->num_rows > 0) {
-    //     $order = $orderResult->fetch_assoc();
-    // } else {
-    //     die("Order not found.");
-    // }
-
-    // // Fetch menu items for the order
-    // $menuItemsQuery = "
-    //     SELECT menu.name, menu.price 
-    //     FROM order_items 
-    //     JOIN menu ON order_items.menu_id = menu.id 
-    //     WHERE order_items.order_id = $orderId";
-    // $menuItemsResult = $conn->query($menuItemsQuery);
-
-    // $menuItems = [];
-    // $totalPrice = 0;
-
-    // if ($menuItemsResult->num_rows > 0) {
-    //     while ($row = $menuItemsResult->fetch_assoc()) {
-    //         $menuItems[] = $row;
-    //         $totalPrice += $row['price'];
-    //     }
-    // } else {
-    //     die("No menu items found for this order.");
-    // }
-
-    $conn->close();
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -58,69 +69,106 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment</title>
     <link rel="stylesheet" href="../../assets/css/styles.css">
-    <style>
-        /* Modal styling */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.4);
-        }
+    <script src="https://js.stripe.com/v3/"></script> <!-- Stripe.js -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const stripe = Stripe('pk_test_51RIw55R0B0Zzi8hZV4ag1Iwk1wKcnVpD4acBDsITfyGgyznwLoeqEvBedMVqWM0sEbGDchiPx1xLyfzLICYxQrfJ00vmhMzCOy'); // Replace with your Publishable Key
+            const payBtn = document.getElementById('payBtn');
+            const paymentModal = document.getElementById('paymentModal');
+            const closeModal = document.getElementById('closeModal');
+            const confirmPayment = document.getElementById('confirmPayment');
+            const paymentMethodSelect = document.getElementById('paymentMethod');
+            const cardElementContainer = document.getElementById('card-element-container');
+            const cardElement = stripe.elements().create('card');
+            cardElement.mount('#card-element');
 
-        .modal-content {
-            background-color: #fff;
-            margin: 15% auto;
-            padding: 20px;
-            border-radius: 10px;
-            width: 80%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
+            // Open modal when "Pay" button is clicked
+            payBtn.addEventListener('click', () => {
+                paymentModal.style.display = 'block';
+            });
 
-        .close-btn {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+            // Close modal when "X" button is clicked
+            closeModal.addEventListener('click', () => {
+                paymentModal.style.display = 'none';
+            });
 
-        .close-btn:hover,
-        .close-btn:focus {
-            color: black;
-            text-decoration: none;
-        }
-        
-        .payment-methods select {
-            width: 100%;
-            padding: 10px;
-            font-size: 16px;
-            margin: 20px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
+            // Close modal when clicking outside the modal
+            window.onclick = (event) => {
+                if (event.target === paymentModal) {
+                    paymentModal.style.display = 'none';
+                }
+            };
 
-        .payment-methods button {
-            background-color: #ff5722;
-            color: #fff;
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
+            // Show or hide card input field based on payment method
+            paymentMethodSelect.addEventListener('change', () => {
+                if (paymentMethodSelect.value === 'Card') {
+                    cardElementContainer.style.display = 'block';
+                } else {
+                    cardElementContainer.style.display = 'none';
+                }
+            });
 
-        .payment-methods button:hover {
-            background-color: #e64a19;
-        }
-    </style>
+            // Process payment using Stripe
+            confirmPayment.addEventListener('click', async () => {
+                const paymentMethod = paymentMethodSelect.value;
+                if (!paymentMethod) {
+                    alert('Please select a payment method.');
+                    return;
+                }
+
+                // Call backend to create a Stripe Payment Intent
+                const response = await fetch('create_payment_intent.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderId: <?php echo $orderId; ?>,
+                        amount: <?php echo $totalPrice * 100; ?>, // Amount in cents
+                        paymentMethod: paymentMethod
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                const { clientSecret } = data;
+
+                // Confirm the payment with the card details
+                const result = await stripe.confirmCardPayment(clientSecret, {
+                    payment_method: {
+                        card: cardElement,
+                        billing_details: {
+                            name: 'Customer Name', // Replace with actual customer name
+                        },
+                    },
+                });
+
+                if (result.error) {
+                    alert(result.error.message);
+                } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+                    alert('Payment successful!');
+                    paymentModal.style.display = 'none';
+
+                    // Update order status and save payment details
+                    await fetch('paymentResult.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            orderId: <?php echo $orderId; ?>,
+                            paymentMethod: paymentMethod,
+                            amount: <?php echo $totalPrice; ?>,
+                            status: 'Paid'
+                        })
+                    });
+
+                    // Redirect to order confirmation page or display success message
+                    alert('Order status updated successfully!');
+                }
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="payment-container">
@@ -129,10 +177,10 @@
         <h2>Menu Items</h2>
         <ul>
             <?php foreach ($menuItems as $item): ?>
-                <li><?php echo htmlspecialchars($item['name']); ?> - $<?php echo number_format($item['price'], 2); ?></li>
+                <li><?php echo htmlspecialchars($item['name']); ?> - RM <?php echo number_format($item['price'], 2); ?></li>
             <?php endforeach; ?>
         </ul>
-        <p><strong>Total Price:</strong> $<?php echo number_format($totalPrice, 2); ?></p>
+        <p><strong>Total Price:</strong> RM <?php echo number_format($totalPrice, 2); ?></p>
         <button id="payBtn">Pay</button>
     </div>
 
@@ -144,47 +192,15 @@
             <div class="payment-methods">
                 <select id="paymentMethod">
                     <option value="" disabled selected>Select a payment method</option>
-                    <option value="Debit">Debit</option>
-                    <option value="QR">QR</option>
-                    <option value="Credit">Credit</option>
-                    <option value="E-Wallet">E-Wallet</option>
-                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
                 </select>
-                <button onclick="processPayment()">Confirm Payment</button>
+                <div id="card-element-container" style="display: none; margin: 20px 0;">
+                    <label for="card-element">Enter Card Details:</label>
+                    <div id="card-element" style="border: 1px solid #ccc; padding: 10px; border-radius: 5px;"></div>
+                </div>
+                <button id="confirmPayment">Confirm Payment</button>
             </div>
         </div>
     </div>
-
-    <script>
-        // Open modal
-        const payBtn = document.getElementById('payBtn');
-        const paymentModal = document.getElementById('paymentModal');
-        const closeModal = document.getElementById('closeModal');
-
-        payBtn.addEventListener('click', () => {
-            paymentModal.style.display = 'block';
-        });
-
-        closeModal.addEventListener('click', () => {
-            paymentModal.style.display = 'none';
-        });
-
-        window.onclick = (event) => {
-            if (event.target === paymentModal) {
-                paymentModal.style.display = 'none';
-            }
-        };
-
-        // Process payment
-        function processPayment() {
-            const paymentMethod = document.getElementById('paymentMethod').value;
-            if (!paymentMethod) {
-                alert('Please select a payment method.');
-                return;
-            }
-            alert('You selected ' + paymentMethod + ' as your payment method.');
-            paymentModal.style.display = 'none';
-        }
-    </script>
 </body>
 </html>

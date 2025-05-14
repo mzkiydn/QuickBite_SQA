@@ -1,11 +1,7 @@
 <?php
 require '../../vendor/autoload.php'; // Include Stripe PHP library
 
-// Load environment variables
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
-$dotenv->load();
-
-\Stripe\Stripe::setApiKey($_ENV['STRIPE_SECRET_KEY']); // Use the secret key from the .env file
+\Stripe\Stripe::setApiKey('secret key'); // Replace with your Secret Key
 
 header('Content-Type: application/json');
 
