@@ -7,7 +7,7 @@
 // Dummy data for testing purposes
 $orderId = 1234;
 
-// Dummy menu items (this would normally come from the database)
+// Dummy menu items
 $menuItems = [
     ['id' => 1, 'name' => 'Burger', 'price' => 5.99],
     ['id' => 2, 'name' => 'Pizza', 'price' => 7.49],
@@ -15,26 +15,21 @@ $menuItems = [
     ['id' => 4, 'name' => 'Pasta', 'price' => 6.79]
 ];
 
-// Initial order items (hardcoded for the test)
+// Initial order items
 $orderItems = [
-    ['menu_id' => 1, 'quantity' => 2],  // 2 Burgers
-    ['menu_id' => 2, 'quantity' => 1],  // 1 Pizza
+    ['menu_id' => 1, 'quantity' => 2], // 2 Burgers
+    ['menu_id' => 2, 'quantity' => 1], // 1 Pizza
 ];
 
-// Calculate the total price based on the dummy data
-$totalPrice = 0;
+// Prepare items for JavaScript
 $orderedItems = [];
-
-foreach ($orderItems as $orderItem) {
-    $menuItem = $menuItems[$orderItem['menu_id'] - 1]; // Menu IDs are 1-based
+foreach ($orderItems as $item) {
+    $menu = $menuItems[$item['menu_id'] - 1];
     $orderedItems[] = [
-        'name' => $menuItem['name'],
-        'price' => $menuItem['price'],
-        'quantity' => $orderItem['quantity']
+        'menu_id' => $item['menu_id'],
+        'quantity' => $item['quantity']
     ];
-    $totalPrice += $menuItem['price'] * $orderItem['quantity'];
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -132,118 +127,104 @@ foreach ($orderItems as $orderItem) {
     </style>
 </head>
 <body>
-    <div class="payment-container">
-        <h1>Your Order</h1>
-        <p><strong>Order ID:</strong> <?php echo $orderId; ?></p>
 
-        <!-- Display the Menu Items -->
-        <h2>Menu Items</h2>
-        <ul id="menu-items-list">
-            <?php foreach ($menuItems as $menuItem): ?>
-                <li class="menu-item">
-                    <span><?php echo htmlspecialchars($menuItem['name']); ?> - RM<?php echo number_format($menuItem['price'], 2); ?></span>
-                    <button onclick="addItem(<?php echo $menuItem['id']; ?>)">Add to Order</button>
-                </li>
-            <?php endforeach; ?>
-        </ul>
+<div class="payment-container">
+    <h1>Your Order</h1>
+    <p><strong>Order ID:</strong> <?php echo $orderId; ?></p>
+<!-- Display the Menu Items -->
+    <h2>Menu Items</h2>
+    <ul id="menu-items-list">
+        <?php foreach ($menuItems as $menuItem): ?>
+            <li class="menu-item">
+                <span><?php echo htmlspecialchars($menuItem['name']); ?> - RM<?php echo number_format($menuItem['price'], 2); ?></span>
+                <button data-id="<?php echo $menuItem['id']; ?>" class="add-item-btn">Add to Order</button>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+<!-- Display the Order Items -->
+    <h2>Your Order</h2>
+    <ul id="order-items-list"></ul>
 
-        <!-- Display the Order Items -->
-        <h2>Your Order</h2>
-        <ul id="order-items-list">
-            <?php foreach ($orderedItems as $index => $item): ?>
-                <li class="order-item" id="item-<?php echo $index; ?>">
-                    <span><?php echo htmlspecialchars($item['name']); ?> - 
-                        <?php echo $item['quantity']; ?> x RM<?php echo number_format($item['price'], 2); ?> = 
-                        RM<?php echo number_format($item['price'] * $item['quantity'], 2); ?>
-                    </span>
-                    <div class="quantity-controls">
-                        <button onclick="updateQuantity(<?php echo $index; ?>, 'decrease')">-</button>
-                        <span id="quantity-<?php echo $index; ?>"><?php echo $item['quantity']; ?></span>
-                        <button onclick="updateQuantity(<?php echo $index; ?>, 'increase')">+</button>
-                    </div>
-                    <button onclick="removeItem(<?php echo $index; ?>)">Remove</button>
-                </li>
-            <?php endforeach; ?>
-        </ul>
+    <p class="total">Total: RM<span id="total-price">0.00</span></p>
+    <a href="../menu.php?orderId=<?php echo $orderId; ?>">
+    <button class="btn">Add Item</button>
+    </a>
+    <a href="../Payment/payment.php?orderId=<?php echo $orderId; ?>">
+        <button class="btn">Proceed to Payment</button>
+    </a>
+</div>
 
-        <p class="total">Total: RM<span id="total-price"><?php echo number_format($totalPrice, 2); ?></span></p>
-        <button class="btn" onclick="addItem()">Add Item</button>
-        <a href="../Payment/payment.php?orderId=<?php echo $orderId; ?>">
-            <button class="btn">Proceed to Payment</button>
-        </a>
-    </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    let orderItems = <?php echo json_encode($orderedItems); ?>;
+    let menuItems = <?php echo json_encode($menuItems); ?>;
 
-    <script>
-        // Initial dummy data to simulate the order items
-        let orderItems = <?php echo json_encode($orderedItems); ?>;
-        let menuItems = <?php echo json_encode($menuItems); ?>;
+    function renderOrder() {
+        const orderItemsList = document.getElementById('order-items-list');
+        orderItemsList.innerHTML = '';
+        let totalPrice = 0;
 
-        // Function to update the quantity of an item in the order
-        function updateQuantity(index, action) {
-            if (action === 'increase') {
-                orderItems[index].quantity++;
-            } else if (action === 'decrease' && orderItems[index].quantity > 1) {
-                orderItems[index].quantity--;
-            }
-            renderOrder();
-        }
+        orderItems.forEach((item, index) => {
+            const menuItem = menuItems.find(m => m.id === item.menu_id);
+            const itemTotal = menuItem.price * item.quantity;
+            totalPrice += itemTotal;
 
-        // Function to remove an item from the order
-        function removeItem(index) {
-            orderItems.splice(index, 1);
-            renderOrder();
-        }
+            const li = document.createElement('li');
+            li.className = 'order-item';
+            li.innerHTML = `
+                <span>${menuItem.name} - ${item.quantity} x RM${menuItem.price.toFixed(2)} = RM${itemTotal.toFixed(2)}</span>
+                <div class="quantity-controls">
+                    <button class="decrease">-</button>
+                    <span>${item.quantity}</span>
+                    <button class="increase">+</button>
+                </div>
+                <button class="remove">Remove</button>
+            `;
 
-        // Function to add an item to the order (now accepts the menu item id)
-        function addItem(menuId) {
-            // Find the selected menu item
-            const menuItem = menuItems.find(item => item.id === menuId);
-            
-            // Check if the item is already in the order
-            const existingItemIndex = orderItems.findIndex(item => item.menu_id === menuItem.id);
-            
-            if (existingItemIndex !== -1) {
-                // If the item is already in the order, increase its quantity
-                orderItems[existingItemIndex].quantity++;
-            } else {
-                // If the item is not in the order, add it with a quantity of 1
-                orderItems.push({ menu_id: menuItem.id, quantity: 1 });
-            }
-            
-            renderOrder();
-        }
-
-        // Function to render the updated order list and total price
-        function renderOrder() {
-            let totalPrice = 0;
-            const orderItemsList = document.getElementById('order-items-list');
-            orderItemsList.innerHTML = ''; // Clear the current order items list
-
-            orderItems.forEach((item, index) => {
-                const menuItem = menuItems[item.menu_id - 1];
-                const itemTotalPrice = menuItem.price * item.quantity;
-                totalPrice += itemTotalPrice;
-
-                // Create new list item
-                const li = document.createElement('li');
-                li.classList.add('order-item');
-                li.id = 'item-' + index;
-
-                li.innerHTML = `
-                    <span>${menuItem.name} - ${item.quantity} x $${menuItem.price.toFixed(2)} = $${itemTotalPrice.toFixed(2)}</span>
-                    <div class="quantity-controls">
-                        <button onclick="updateQuantity(${index}, 'decrease')">-</button>
-                        <span id="quantity-${index}">${item.quantity}</span>
-                        <button onclick="updateQuantity(${index}, 'increase')">+</button>
-                    </div>
-                    <button onclick="removeItem(${index})">Remove</button>
-                `;
-
-                orderItemsList.appendChild(li);
+            // Add functionality
+            li.querySelector('.increase').addEventListener('click', () => {
+                item.quantity++;
+                renderOrder();
             });
 
-            // Update total price
-            document.getElementById('total-price').textContent = totalPrice.toFixed(2);
-        }
+            li.querySelector('.decrease').addEventListener('click', () => {
+                if (item.quantity > 1) {
+                    item.quantity--;
+                    renderOrder();
+                }
+            });
 
-        
+            li.querySelector('.remove').addEventListener('click', () => {
+                orderItems.splice(index, 1);
+                renderOrder();
+            });
+
+            orderItemsList.appendChild(li);
+        });
+
+        document.getElementById('total-price').textContent = totalPrice.toFixed(2);
+    }
+
+    // Add event listeners to "Add to Order" buttons
+    document.querySelectorAll('.add-item-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const menuId = parseInt(button.getAttribute('data-id'));
+            const existing = orderItems.find(item => item.menu_id === menuId);
+
+            if (existing) {
+                existing.quantity++;
+            } else {
+                orderItems.push({ menu_id: menuId, quantity: 1 });
+            }
+
+            renderOrder();
+        });
+    });
+
+    // Initial render
+    renderOrder();
+});
+</script>
+
+</body>
+</html>
