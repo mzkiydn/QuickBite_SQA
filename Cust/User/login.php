@@ -2,8 +2,7 @@
 session_start(); // Start the session
 
 // Include all PHP files from the includes folder
-foreach (glob("../../includes/conn.php") as $file) 
-{
+foreach (glob("../../includes/conn.php") as $file) {
     include $file;
 }
 
@@ -22,7 +21,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Check connection
     if ($conn->connect_error) {
-        // Removed connection error details to prevent data breach alert
         die("Connection failed");
     }
 
@@ -34,11 +32,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if ($result->num_rows == 1) {
         // Login success
-        header("Location: dashboard.php");
+        $_SESSION['username'] = $username;
+        $_SESSION['role'] = $role;
+
+        if ($role === "customer") {
+            header("Location: ../../Menu/menuCust.php");
+        } elseif ($role === "admin") {
+            header("Location: ../../User/dashboard.php");
+        } else {
+            $_SESSION['error'] = "Role not recognized.";
+            header("Location: ../../login.php");
+        }
         exit();
     } else {
         // Login failed
         $_SESSION['error'] = "Username, password or role is incorrect.";
+        header("Location: ../../login.php");
+        exit();
     }
 
     $stmt->close();
