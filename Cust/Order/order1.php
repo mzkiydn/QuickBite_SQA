@@ -19,9 +19,7 @@ $password = "";
 $database = "quickbite";
 $conn = new mysqli($servername, $username, $password, $database);
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+
 
 // Get order items by joining MenuList + Menu
 $sql = "SELECT ml.menuID, m.name, m.price, ml.quantity 
