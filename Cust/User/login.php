@@ -1,7 +1,7 @@
 <?php
 session_start(); // Start the session
 
-// Include all PHP files from the includes folder
+// Include connection file
 foreach (glob("../../includes/conn.php") as $file) {
     include $file;
 }
@@ -13,13 +13,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Database connection
     $servername = "localhost";
-    $dbUsername = "root"; // Changed variable name to avoid conflict
-    $dbPassword = ""; // Changed variable name to avoid conflict
+    $dbUsername = "root";
+    $dbPassword = "";
     $dbname = "quickbite";
 
     $conn = new mysqli($servername, $dbUsername, $dbPassword, $dbname);
 
-    // Check connection
     if ($conn->connect_error) {
         die("Connection failed");
     }
@@ -35,20 +34,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['username'] = $username;
         $_SESSION['role'] = $role;
 
-        if ($role === "customer") {
-            header("Location: ../../Menu/menuCust.php");
-        } elseif ($role === "admin") {
-            header("Location: ../../User/dashboard.php");
-        } else {
-            $_SESSION['error'] = "Role not recognized.";
-            header("Location: ../../login.php");
+        if ($role === "admin") {
+            header("Location: ../../Admin/Menu/menuAdmin.php");
+        } elseif ($role === "customer") {
+            header("Location: ../Menu/menuCust.php");
         }
         exit();
     } else {
         // Login failed
-        $_SESSION['error'] = "Username, password or role is incorrect.";
-        header("Location: ../../login.php");
-        exit();
+        echo "<script>alert('Username or password is incorrect'); window.location.href='login.php';</script>";
     }
 
     $stmt->close();
