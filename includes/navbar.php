@@ -5,7 +5,7 @@
     <a href="javascript:void(0)" class="close-btn" onclick="toggleNav()">&times;</a>
     <a href="index.php">User</a>
     <a href="order.php">Order</a>
-    <a href="menu.php">Menu</a>
+    <a href="../Menu/menuAdmin.php">Menu</a>
     <a href="payment.php">Payment</a>
 </div>
 
@@ -43,4 +43,16 @@
         font-size: 36px;
         color: #fff;
     }
+
+     /* Menu Icon */
+        .menu-icon {
+            font-size: 24px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
 </style>
