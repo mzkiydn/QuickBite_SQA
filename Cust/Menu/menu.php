@@ -1,14 +1,12 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$database = "quickbite";
+
 $orderID = $_GET['orderID'] ?? null;
 
     // Include all PHP files from the includes folder
     foreach (glob("../../includes/*.php") as $file) {
         include $file;
     }
+
 ?>
 
 <!DOCTYPE html>
@@ -40,6 +38,8 @@ $orderID = $_GET['orderID'] ?? null;
                 $username = "root";
                 $password = "";
                 $database = "quickbite";
+
+                $orderID = $_GET['orderID'] ?? null;
 
                 // Create connection
                 $connection = new mysqli($servername, $username, $password, $database);

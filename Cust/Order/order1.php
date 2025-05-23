@@ -11,7 +11,7 @@ if ($connection->connect_error) {
 
 
 //fetch data from db
-$orderId = $_GET['orderID'] ?? 0;
+$orderID = $_GET['orderID'] ?? 0;
 
 $servername = "localhost";
 $username = "root";
@@ -27,7 +27,7 @@ $sql = "SELECT ml.menuID, m.name, m.price, ml.quantity
         JOIN Menu m ON ml.menuID = m.menuID 
         WHERE ml.orderID = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $orderId);
+$stmt->bind_param("i", $orderID);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -47,15 +47,7 @@ while ($row = $menuQuery->fetch_assoc()) {
     ];
 }
 
-// Prepare items for JavaScript
-//$orderItems = [];
-//foreach ($orderItems as $item) {
-    //$menu = $menuItems[$item['menu_id'] - 1];
-    //$orderItems[] = [
-        //'menu_id' => $item['menu_id'],
-        //'quantity' => $item['quantity']
-    //];
-//}
+
 ?>
 
 <!DOCTYPE html>
@@ -156,17 +148,17 @@ while ($row = $menuQuery->fetch_assoc()) {
 
 <div class="payment-container">
     <h1>Your Order</h1>
-    <p><strong>Order ID:</strong> <?php echo $orderId; ?></p>
+    <p><strong>Order ID:</strong> <?php echo $orderID; ?></p>
 
 <!-- Display the Order Items -->
     <h2>Your Order</h2>
     <ul id="order-items-list"></ul>
 
     <p class="total">Total: RM<span id="total-price">0.00</span></p>
-    <a href="../menu/menu.php?orderId=<?php echo $orderId; ?>">
+    <a href="../menu/menu.php?orderID=<?php echo $orderID; ?>">
     <button class="btn">Add Item</button>
     </a>
-    <a href="../Payment/payment.php?orderId=<?php echo $orderId; ?>">
+    <a href="../Payment/payment.php?orderID=<?php echo $orderID; ?>">
         <button class="btn">Proceed to Payment</button>
     </a>
 </div>
