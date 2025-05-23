@@ -4,55 +4,67 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Trim and validate inputs
     $username = trim($_POST['username']);
-    $password = trim($_POST['password']);
+    $password_raw = trim($_POST['password']);
     $role = "customer";
 
-    // Database connection
-    $conn = new mysqli("localhost", "root", "", "quickbite");
-
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-    // Check if username already exists
-    $checkStmt = $conn->prepare("SELECT id FROM user WHERE username = ?");
-    $checkStmt->bind_param("s", $username);
-    $checkStmt->execute();
-    $checkStmt->store_result();
-
-    if ($checkStmt->num_rows > 0) {
-        $_SESSION['error'] = "Username already exists. Please choose a different one.";
+    // Validate username and password length (max 15 chars)
+    if (strlen($username) > 15) {
+        $_SESSION['error'] = "Username must be 15 characters or less.";
+    } elseif (strlen($password_raw) > 15) {
+        $_SESSION['error'] = "Password must be 15 characters or less.";
     } else {
-        // Store plain text password (NOT recommended for real apps)
-        $stmt = $conn->prepare("INSERT INTO user (username, password, role) VALUES (?, ?, ?)");
-        if ($stmt) {
-            $stmt->bind_param("sss", $username, $password, $role);
+        // Hash password securely
+        $password = password_hash($password_raw, PASSWORD_DEFAULT);
 
-            if ($stmt->execute()) {
-                header("Location: dashboard.php");
-                exit();
-            } else {
-                $_SESSION['error'] = "Registration failed. Please try again.";
-            }
-            $stmt->close();
-        } else {
-            $_SESSION['error'] = "Database error. Please contact admin.";
+        // Database connection
+        $conn = new mysqli("localhost", "root", "", "quickbite");
+
+        if ($conn->connect_error) {
+            die("Connection failed: " . $conn->connect_error);
         }
-    }
 
-    $checkStmt->close();
-    $conn->close();
+        // Check if username already exists (case-insensitive)
+        $checkStmt = $conn->prepare("SELECT username FROM User WHERE LOWER(username) = LOWER(?)");
+        $checkStmt->bind_param("s", $username);
+        $checkStmt->execute();
+        $checkStmt->store_result();
+
+        if ($checkStmt->num_rows > 0) {
+            $_SESSION['error'] = "Username already exists. Please choose a different one.";
+        } else {
+            // Insert new user with role = 'customer'
+            $stmt = $conn->prepare("INSERT INTO User (username, password, role) VALUES (?, ?, ?)");
+            if ($stmt) {
+                $stmt->bind_param("sss", $username, $password, $role);
+
+                if ($stmt->execute()) {
+                    // Registration success, redirect to dashboard
+                    header("Location: login.php");
+                    exit();
+                } else {
+                    $_SESSION['error'] = "Registration failed. Please try again.";
+                }
+                $stmt->close();
+            } else {
+                $_SESSION['error'] = "Database error. Please contact admin.";
+            }
+        }
+
+        $checkStmt->close();
+        $conn->close();
+    }
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Register - QuickBite</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/styles.css" />
     <style>
         body {
             margin: 0;
@@ -113,16 +125,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <h2>Register for QuickBite</h2>
         <?php
         if (isset($_SESSION['error'])) {
-            echo '<div class="error">' . $_SESSION['error'] . '</div>';
+            echo '<div class="error">' . htmlspecialchars($_SESSION['error']) . '</div>';
             unset($_SESSION['error']);
         }
         ?>
-        <form action="register.php" method="POST">
-            <label for="username">Username</label>
-            <input type="text" name="username" id="username" required>
+        <form action="register.php" method="POST" autocomplete="off">
+            <label for="username">Username (max 15 chars)</label>
+            <input type="text" name="username" id="username" maxlength="15" required />
 
-            <label for="password">Password</label>
-            <input type="password" name="password" id="password" required>
+            <label for="password">Password (max 15 chars)</label>
+            <input type="password" name="password" id="password" maxlength="15" required />
 
             <button type="submit">Register</button>
         </form>
