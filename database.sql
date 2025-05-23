@@ -81,12 +81,12 @@ CREATE TABLE `Payment` (
 -- Table structure for table `User`
 --
 
-CREATE TABLE `User` (
-  `userID` varchar(10) NOT NULL,
-  `username` varchar(20) NOT NULL,
-  `password` varchar(20) NOT NULL,
-  `role` varchar(15) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE User (
+    userID INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(15) NOT NULL UNIQUE,
+    password VARCHAR(15) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'customer'
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Indexes for dumped tables

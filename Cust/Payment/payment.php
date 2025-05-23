@@ -41,7 +41,7 @@ if ($orderResult->num_rows > 0) {
 
 // Fetch menu items for the order
 $menuItemsQuery = "
-    SELECT menu.name, menu.price 
+    SELECT menu.name, menu.price, menulist.quantity 
     FROM menulist 
     JOIN menu ON menulist.menuID = menu.menuID 
     WHERE menulist.orderID = $orderId";
@@ -53,7 +53,7 @@ $totalPrice = 0;
 if ($menuItemsResult->num_rows > 0) {
     while ($row = $menuItemsResult->fetch_assoc()) {
         $menuItems[] = $row;
-        $totalPrice += $row['price'];
+        $totalPrice += $row['price'] * $row['quantity'];
     }
 } else {
     die("No menu items found for this order.");
