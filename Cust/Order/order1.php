@@ -1,9 +1,5 @@
 <?php
-    // Database connection
-$connection = new mysqli("localhost", "root", "", "quickbite");
-if ($connection->connect_error) {
-    die("Connection failed: " . $connection->connect_error);
-}
+
     // Include all PHP files from the includes folder
     foreach (glob("../../includes/*.php") as $file) {
         include $file;
@@ -12,13 +8,6 @@ if ($connection->connect_error) {
 
 //fetch data from db
 $orderID = $_GET['orderID'] ?? 0;
-
-$servername = "localhost";
-$username = "root";
-$password = "";
-$database = "quickbite";
-$conn = new mysqli($servername, $username, $password, $database);
-
 
 
 // Get order items by joining MenuList + Menu
@@ -46,7 +35,6 @@ while ($row = $menuQuery->fetch_assoc()) {
         'price' => (float)$row['price']
     ];
 }
-
 
 ?>
 

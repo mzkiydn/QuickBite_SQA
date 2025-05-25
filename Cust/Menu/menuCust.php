@@ -62,7 +62,7 @@ $orderID = $_GET['orderID'] ?? null;
                         <td>{$row['description']}</td>
                         <td>{$row['price']}</td>
                         <td>
-                            <a class='btn btn-success btn-sm' href='addToOrder.php?id={$row['menuID']}'>Add to Order</a>
+                            <a class='btn btn-success btn-sm' href='../Order/addToOrder.php?id={$row['menuID']}'>Add to Order</a>
                         </td>
                     </tr>
                     ";
