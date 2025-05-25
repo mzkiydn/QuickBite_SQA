@@ -87,7 +87,7 @@ foreach (glob("../../includes/*.php") as $file) {
             echo "<td>" . htmlspecialchars($row['name']) . "</td>";
             echo "<td>" . htmlspecialchars($row['description']) . "</td>";
             echo "<td>" . htmlspecialchars($row['price']) . "</td>";
-            echo "<td><a class='btn btn-sm btn-custom' href='addToOrder.php?id=" . htmlspecialchars($row['menuID']) . "'>Add to Order</a></td>";
+            echo "<td><a class='btn btn-sm btn-custom' href='../Order/addToOrder.php?id=" . htmlspecialchars($row['menuID']) . "'>Add to Order</a></td>";
             echo "</tr>";
         }
         ?>
