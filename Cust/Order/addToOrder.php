@@ -1,13 +1,8 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$database = "quickbite";
-
-$conn = new mysqli($servername, $username, $password, $database);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+    // Include all PHP files from the includes folder
+    foreach (glob("../../includes/*.php") as $file) {
+        include $file;
+    }
 
 // Get menuID and orderID from URL
 $menuID = $_GET['menuID'] ?? null;
