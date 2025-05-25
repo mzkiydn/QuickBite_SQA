@@ -5,6 +5,34 @@ $password = "";
 $database = "quickbite";
 $orderID = $_GET['orderID'] ?? null;
 
+$connection = new mysqli($servername, $username, $password, $database);
+if ($connection->connect_error) {
+    die("Connection failed: " . $connection->connect_error);
+}
+
+// Check if orderID is set in URL or session
+if (!empty($_GET['orderID'])) {
+    $orderID = $_GET['orderID'];
+    $_SESSION['orderID'] = $orderID; // save to session
+} elseif (!empty($_SESSION['orderID'])) {
+    $orderID = $_SESSION['orderID'];
+} else {
+    // No orderID in URL or session, create a new order
+    $orderID = uniqid('O'); // unique orderID e.g. O643a7f5b12c3f
+    $userID = 1; // hardcoded for now, replace with real logged in user ID if available
+    $date = date('Y-m-d');
+    $status = 'unpaid';
+    $total = 0;
+
+    // Insert new order into database
+    $stmt = $connection->prepare("INSERT INTO `Order` (orderID, date, total, status, userID) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param('ssisi', $orderID, $date, $total, $status, $userID);
+    $stmt->execute();
+    $stmt->close();
+
+    $_SESSION['orderID'] = $orderID;
+}
+
 // Include all PHP files from the includes folder
 foreach (glob("../../includes/*.php") as $file) {
     include $file;
@@ -87,7 +115,7 @@ foreach (glob("../../includes/*.php") as $file) {
             echo "<td>" . htmlspecialchars($row['name']) . "</td>";
             echo "<td>" . htmlspecialchars($row['description']) . "</td>";
             echo "<td>" . htmlspecialchars($row['price']) . "</td>";
-            echo "<td><a class='btn btn-sm btn-custom' href='../Order/addToOrder.php?id=" . htmlspecialchars($row['menuID']) . "'>Add to Order</a></td>";
+            echo "<td><a class='btn btn-sm btn-custom' href='../Order/addToOrder.php?menuID={$row['menuID']}&orderID={$orderID}'>Add to Order</a></td>";
             echo "</tr>";
         }
         ?>

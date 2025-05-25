@@ -42,7 +42,7 @@ CREATE TABLE `Menu` (
 
 CREATE TABLE `MenuList` (
   `menuID` varchar(10) NOT NULL,
-  `orderID` varchar(10) NOT NULL,
+  `orderID` INT NOT NULL,
   `quantity` int(11) NOT NULL,
   `remarks` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -54,11 +54,12 @@ CREATE TABLE `MenuList` (
 --
 
 CREATE TABLE `Order` (
-  `orderID` varchar(10) NOT NULL,
-  `date` date NOT NULL,
-  `total` decimal(10,0) NOT NULL,
-  `status` varchar(15) NOT NULL,
-  `userID` varchar(10) NOT NULL
+  `orderID` INT AUTO_INCREMENT NOT NULL,
+  `date` DATE NOT NULL,
+  `total` DECIMAL(10,0) NOT NULL,
+  `status` VARCHAR(15) NOT NULL,
+  `userID` VARCHAR(10) NOT NULL,
+  PRIMARY KEY (`orderID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -72,7 +73,7 @@ CREATE TABLE `Payment` (
   `date` date NOT NULL,
   `amount` decimal(10,0) NOT NULL,
   `method` varchar(20) NOT NULL,
-  `orderID` varchar(10) NOT NULL
+  `orderID` INT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
