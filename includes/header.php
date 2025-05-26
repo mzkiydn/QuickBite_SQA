@@ -26,8 +26,8 @@ session_start();
                 <?php if (isset($_SESSION['user'])): ?>
                     <div class="user-info">
                         <span>Welcome, <?php echo htmlspecialchars($_SESSION['user']['name']); ?>!</span>
-                        <a href="">Profile</a>
-                        <a href="">Logout</a>
+                        <a href="../../Cust/User/login.php">Login</a>
+                        <a href="../../Cust/User/register.php">Register</a>
                     </div>
                 <?php else: ?>
                     <div class="guest-info">
