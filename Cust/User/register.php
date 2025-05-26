@@ -16,7 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // Check if username already exists
-    $checkStmt = $conn->prepare("SELECT id FROM user WHERE username = ?");
+    $checkStmt = $conn->prepare("SELECT userID FROM user WHERE username = ?");
     $checkStmt->bind_param("s", $username);
     $checkStmt->execute();
     $checkStmt->store_result();

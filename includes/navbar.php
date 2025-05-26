@@ -3,10 +3,10 @@
 <link rel="stylesheet" href="../../assets/css/styles.css">
 <div id="side-nav" class="side-nav">
     <a href="javascript:void(0)" class="close-btn" onclick="toggleNav()">&times;</a>
-    <a href="index.php">User</a>
-    <a href="order.php">Order</a>
-    <a href="menu.php">Menu</a>
-    <a href="payment.php">Payment</a>
+    <a href="../User/index.php">User</a>
+    <a href="../Order/order.php">Order</a>
+    <a href="../Menu/menu.php">Menu</a>
+    <a href="../Payment/payment.php">Payment</a>
 </div>
 
 <style>
