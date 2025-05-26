@@ -1,33 +1,36 @@
 <?php
+
     // Include all PHP files from the includes folder
     foreach (glob("../../includes/*.php") as $file) {
         include $file;
     }
 
-// Dummy data for testing purposes
-$orderId = 1234;
+//fetch data from db
+$orderID = $_GET['orderID'] ?? 0;
 
-// Dummy menu items
-$menuItems = [
-    ['id' => 1, 'name' => 'Burger', 'price' => 5.99],
-    ['id' => 2, 'name' => 'Pizza', 'price' => 7.49],
-    ['id' => 3, 'name' => 'Salad', 'price' => 4.99],
-    ['id' => 4, 'name' => 'Pasta', 'price' => 6.79]
-];
+// Get order items by joining MenuList + Menu
+$sql = "SELECT ml.menuID, m.name, m.price, ml.quantity 
+        FROM MenuList ml 
+        JOIN Menu m ON ml.menuID = m.menuID 
+        WHERE ml.orderID = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $orderID);
+$stmt->execute();
+$result = $stmt->get_result();
 
-// Initial order items
-$orderItems = [
-    ['menu_id' => 1, 'quantity' => 2], // 2 Burgers
-    ['menu_id' => 2, 'quantity' => 1], // 1 Pizza
-];
+$orderItems = [];
+while ($row = $result->fetch_assoc()) {
+    $orderItems[] = $row;
+}
 
-// Prepare items for JavaScript
-$orderedItems = [];
-foreach ($orderItems as $item) {
-    $menu = $menuItems[$item['menu_id'] - 1];
-    $orderedItems[] = [
-        'menu_id' => $item['menu_id'],
-        'quantity' => $item['quantity']
+// Fetch all menu items
+$menuItems = [];
+$menuQuery = $conn->query("SELECT menuID, name, price FROM Menu");
+while ($row = $menuQuery->fetch_assoc()) {
+    $menuItems[] = [
+        'id' => $row['menuID'],  // Use 'id' to match JS code
+        'name' => $row['name'],
+        'price' => (float)$row['price']
     ];
 }
 ?>
@@ -130,34 +133,43 @@ foreach ($orderItems as $item) {
 
 <div class="payment-container">
     <h1>Your Order</h1>
-    <p><strong>Order ID:</strong> <?php echo $orderId; ?></p>
-<!-- Display the Menu Items -->
-    <h2>Menu Items</h2>
-    <ul id="menu-items-list">
-        <?php foreach ($menuItems as $menuItem): ?>
-            <li class="menu-item">
-                <span><?php echo htmlspecialchars($menuItem['name']); ?> - RM<?php echo number_format($menuItem['price'], 2); ?></span>
-                <button data-id="<?php echo $menuItem['id']; ?>" class="add-item-btn">Add to Order</button>
-            </li>
-        <?php endforeach; ?>
-    </ul>
+    <p><strong>Order ID:</strong> <?php echo $orderID; ?></p>
+
 <!-- Display the Order Items -->
     <h2>Your Order</h2>
     <ul id="order-items-list"></ul>
 
     <p class="total">Total: RM<span id="total-price">0.00</span></p>
-    <a href="../menu.php?orderId=<?php echo $orderId; ?>">
+    <a href="../menu/menuCust.php?orderID=<?php echo $orderID; ?>">
     <button class="btn">Add Item</button>
     </a>
-    <a href="../Payment/payment.php?orderId=<?php echo $orderId; ?>">
+    <a href="../Payment/payment.php?orderID=<?php echo $orderID; ?>">
         <button class="btn">Proceed to Payment</button>
     </a>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    let orderItems = <?php echo json_encode($orderedItems); ?>;
+    let orderItems = <?php echo json_encode($orderItems); ?>;
     let menuItems = <?php echo json_encode($menuItems); ?>;
+
+    function updateItemInDB(menuID, action) {
+    const formData = new URLSearchParams();
+    formData.append("orderID", "<?php echo $orderID; ?>");
+    formData.append("menuID", menuID);
+    formData.append("action", action);
+
+    fetch('updateOrderItem.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData.toString()
+    })
+    .then(response => response.text())
+    .then(data => console.log("Server response:", data))
+    .catch(error => console.error("Error:", error));
+}
 
     function renderOrder() {
         const orderItemsList = document.getElementById('order-items-list');
@@ -165,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let totalPrice = 0;
 
         orderItems.forEach((item, index) => {
-            const menuItem = menuItems.find(m => m.id === item.menu_id);
+            const menuItem = menuItems.find(m => m.id == item.menuID);
             const itemTotal = menuItem.price * item.quantity;
             totalPrice += itemTotal;
 
@@ -181,21 +193,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 <button class="remove">Remove</button>
             `;
 
-            // Add functionality
             li.querySelector('.increase').addEventListener('click', () => {
                 item.quantity++;
+                updateItemInDB(item.menuID, 'increase');
                 renderOrder();
             });
 
             li.querySelector('.decrease').addEventListener('click', () => {
                 if (item.quantity > 1) {
                     item.quantity--;
+                    updateItemInDB(item.menuID, 'decrease');
                     renderOrder();
                 }
             });
 
             li.querySelector('.remove').addEventListener('click', () => {
                 orderItems.splice(index, 1);
+                updateItemInDB(item.menuID, 'remove');
                 renderOrder();
             });
 
@@ -205,26 +219,10 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('total-price').textContent = totalPrice.toFixed(2);
     }
 
-    // Add event listeners to "Add to Order" buttons
-    document.querySelectorAll('.add-item-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const menuId = parseInt(button.getAttribute('data-id'));
-            const existing = orderItems.find(item => item.menu_id === menuId);
-
-            if (existing) {
-                existing.quantity++;
-            } else {
-                orderItems.push({ menu_id: menuId, quantity: 1 });
-            }
-
-            renderOrder();
-        });
-    });
-
-    // Initial render
     renderOrder();
 });
 </script>
+
 
 </body>
 </html>

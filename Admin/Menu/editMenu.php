@@ -1,105 +1,113 @@
 <?php
+
 $servername = "localhost";
 $username = "root";
 $password = "";
 $database = "quickbite";
 
-// Create connection
+// Include all PHP files from the includes folder
+    foreach (glob("../../includes/*.php") as $file) {
+        include $file;
+    }
+
+// Connect to the database
 $connection = new mysqli($servername, $username, $password, $database);
-
-$menuID = "";
-$name = "";
-$description = "";
-$price = "";
-
-$errorMessage = "";
-$successMessage = "";
-
-// Get ID from URL
-if (!isset($_GET["id"])) {
-    header("Location: menuAdmin.php");
-    exit;
+if ($connection->connect_error) {
+    die("Connection failed: " . $connection->connect_error);
 }
 
-$menuID = $_GET["id"];
+$menuID = $_GET['id'] ?? $_POST['menuID'] ?? null;
+if (!$menuID) {
+    die("Invalid ID");
+}
+
+
 
 // Fetch existing data
 $sql = "SELECT * FROM menu WHERE menuID = ?";
 $stmt = $connection->prepare($sql);
-$stmt->bind_param("i", $menuID);
+$stmt->bind_param("s", $menuID);
 $stmt->execute();
 $result = $stmt->get_result();
+$menu = $result->fetch_assoc();
 
-if ($result->num_rows != 1) {
-    header("Location: menuAdmin.php");
-    exit;
+if (!$menu) {
+    die("Menu item not found");
 }
 
-$row = $result->fetch_assoc();
-$name = $row["name"];
-$description = $row["description"];
-$price = $row["price"];
-
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+// Update if form submitted
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $name = $_POST["name"];
     $description = $_POST["description"];
     $price = $_POST["price"];
+    $image = $_FILES["image"] ?? null;
 
-    do {
-        if (empty($name) || empty($description) || empty($price)) {
-            $errorMessage = "All fields are required";
-            break;
-        }
+    $updateSql = "UPDATE menu SET name=?, description=?, price=?" . ($image && $image["error"] == 0 ? ", image=?" : "") . " WHERE menuID=?";
+    if ($image && $image["error"] == 0) {
+        $imageName = $menuID . "_" . basename($image["name"]);
+        $targetFile = __DIR__ . "/../assets/images/" . $imageName;
+        move_uploaded_file($image["tmp_name"], $targetFile);
+        $updateStmt = $connection->prepare($updateSql);
+        $updateStmt->bind_param("ssdss", $name, $description, $price, $imageName, $menuID);
+    } else {
+        $updateStmt = $connection->prepare($updateSql);
+        $updateStmt->bind_param("ssds", $name, $description, $price, $menuID);
+    }
 
-        $sql = "UPDATE menu SET name=?, description=?, price=? WHERE menuID=?";
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param("sssi", $name, $description, $price, $menuID);
-
-        if (!$stmt->execute()) {
-            $errorMessage = "Update failed: " . $stmt->error;
-            break;
-        }
-
-        $successMessage = "Menu updated successfully!";
-        header("Location: ../Menu/menuAdmin.php");
-        exit;
-
-    } while (false);
+    $updateStmt->execute();
+    header("Location: menuAdmin.php");
+    exit;
 }
 ?>
 
-<!-- HTML form for editing -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Edit Menu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../assets/css/styles.css"> <!-- Optional: same CSS as menuAdmin.php -->
 </head>
 <body>
-<div class="container">
-    <h2>Edit Menu</h2>
-    <?php if (!empty($errorMessage)) : ?>
-        <div class="alert alert-warning"><?= $errorMessage ?></div>
-    <?php endif; ?>
 
-    <form method="post">
-        <div class="mb-3">
-            <label class="form-label">Name</label>
-            <input type="text" class="form-control" name="name" value="<?= $name ?>">
+    <div class="container min-vh-100 d-flex flex-column justify-content-start pt-4 pb-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                <div class="card shadow p-4">
+                    <h2 class="mb-4 text-center">Edit Menu</h2>
+                    <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="menuID" value="<?= htmlspecialchars($menuID) ?>">
+                        <div class="mb-3">
+                                <label class="form-label">Update Image</label>
+                                <input type="file" class="form-control" name="image" accept="image/*">
+                                <?php if (!empty($menu['image'])): ?>
+                                    <img src="../assets/images/<?= htmlspecialchars($menu['image']) ?>" alt="Current Image" style="max-width: 100px;" class="mt-2">
+                                <?php endif; ?>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Menu Name</label>
+                            <input type="text" class="form-control" name="name" value="<?= htmlspecialchars($menu['name']) ?>" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="4" required><?= htmlspecialchars($menu['description']) ?></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Price (RM)</label>
+                            <input type="number" step="0.01" class="form-control" name="price" value="<?= htmlspecialchars($menu['price']) ?>" required>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-success">Update</button>
+                            <a href="menuAdmin.php" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label">Description</label>
-            <input type="text" class="form-control" name="description" value="<?= $description ?>">
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Price</label>
-            <input type="text" class="form-control" name="price" value="<?= $price ?>">
-        </div>
-        <button type="submit" class="btn btn-primary">Update</button>
-        <a href="menuAdmin.php" class="btn btn-secondary">Cancel</a>
-    </form>
-</div>
+    </div>
+
 </body>
 </html>
+
